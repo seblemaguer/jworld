@@ -1,0 +1,5 @@
+swig/
+
+# Gradle
+.gradle/
+build/
