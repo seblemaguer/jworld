@@ -1,0 +1,92 @@
+plugins {
+    id "java"
+    id "net.tribe-seven.swig" version "0.1.1"
+}
+
+
+repositories {
+    jcenter()
+    maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local' }
+}
+
+dependencies {
+    testCompile group: 'org.testng', name: 'testng', version: '6.8.13'
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir "$buildDir/lib"
+        }
+    }
+}
+
+// test {
+//     environment "LD_LIBRARY_PATH": "$buildDir"
+//     environment "DYLD_LIBRARY_PATH":  "$buildDir"
+// }
+
+task compileSwig(type: SwigTask) {
+    description "Generate the JNI wrapping necessary files"
+    verbose = true
+    javaSourcesPath = new File("$projectDir/src/main/java/jworld")
+    source = new File("$projectDir/swig/world.i")
+    wrapperTargetFile = new File("$projectDir/build/world_wrap.c")
+    module = "World"
+    packageName = "jworld"
+}
+
+task compileObjects(dependsOn: compileSwig) {
+    description "Compiling the objects"
+
+    def JAVA_HOME = System.properties['java.home'] + "/.."
+
+    buildDir.mkdirs()
+    doLast {
+
+        exec {
+            commandLine "gcc", "-fpic", "-c", "$buildDir/world_wrap.c", "-o", "$buildDir/world_wrap.o", "-I${JAVA_HOME}/include/", "-I${JAVA_HOME}/include/linux"
+        }
+    }
+}
+
+task generateLibrary(dependsOn: compileObjects) {
+    description "Generate the shared library to be used"
+    (new File("$buildDir/lib")).mkdirs()
+    doLast {
+        exec {
+            commandLine "gcc", "-shared", "$projectDir/World/build/libworld.a",  "$buildDir/world_wrap.o", "-o", "$buildDir/lib/libworld.so"
+        }
+    }
+}
+
+compileJava.dependsOn generateLibrary
+
+// task generateObjects(dependsOn: generateInterfaces) {
+//     doLast {
+//         // exec {
+//         //     commandLine "gcc", "-o", "$projectDir/World/src/synthesis.o", "-c", "$projectDir/World/src/synthesis.cpp", "-I$projectDir/World/src", "-I/usr/lib/jvm/java-8-openjdk/include/", "-I/usr/lib/jvm/java-8-openjdk/include/linux"
+//         //     , "$projectDir/swig/world_wrap.c"
+//         // }
+
+//         exec {
+//             commandLine "gcc",  "-o", "$projectDir/swig/world_wrap.o", "-c", "$projectDir/swig/world_wrap.c", "-I$projectDir/World/src", "-I/usr/lib/jvm/java-8-openjdk/include/", "-I/usr/lib/jvm/java-8-openjdk/include/linux"
+
+//         }
+//     }
+// }
+
+
+// task generateLibrary(dependsOn: generateObjects) {
+//     doLast {
+//         exec {
+//             commandLine "gcc", "-shared", "-Wall", "-o", "libworld.so", "$projectDir/swig/world_wrap.o", "$projectDir/World/build/libworld.a"
+//         }
+//     }
+// }
+
+// build.dependsOn generateLibrary
+
+// $(MYMOD)_java.$(SOEXT): $(JOBJS)
+//         $(LD) $(SOFLAGS) $@ $^
+//         @ /bin/ln -s $(MYMOD)_java.$(SOEXT) ./lib$(MYMOD)_java.$(SOEXT)
