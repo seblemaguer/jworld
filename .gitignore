@@ -1,5 +1,9 @@
+#SWIG
 swig/
 
 # Gradle
 .gradle/
 build/
+
+# Emacs
+.meghanada/
