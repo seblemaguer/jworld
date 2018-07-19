@@ -21,10 +21,11 @@ sourceSets {
     }
 }
 
-// test {
-//     environment "LD_LIBRARY_PATH": "$buildDir"
-//     environment "DYLD_LIBRARY_PATH":  "$buildDir"
-// }
+test {
+    useTestNG()
+    // environment "LD_LIBRARY_PATH": "$buildDir"
+    // environment "DYLD_LIBRARY_PATH":  "$buildDir"
+}
 
 task compileSwig(type: SwigTask) {
     description "Generate the JNI wrapping necessary files"
@@ -61,32 +62,3 @@ task generateLibrary(dependsOn: compileObjects) {
 }
 
 compileJava.dependsOn generateLibrary
-
-// task generateObjects(dependsOn: generateInterfaces) {
-//     doLast {
-//         // exec {
-//         //     commandLine "gcc", "-o", "$projectDir/World/src/synthesis.o", "-c", "$projectDir/World/src/synthesis.cpp", "-I$projectDir/World/src", "-I/usr/lib/jvm/java-8-openjdk/include/", "-I/usr/lib/jvm/java-8-openjdk/include/linux"
-//         //     , "$projectDir/swig/world_wrap.c"
-//         // }
-
-//         exec {
-//             commandLine "gcc",  "-o", "$projectDir/swig/world_wrap.o", "-c", "$projectDir/swig/world_wrap.c", "-I$projectDir/World/src", "-I/usr/lib/jvm/java-8-openjdk/include/", "-I/usr/lib/jvm/java-8-openjdk/include/linux"
-
-//         }
-//     }
-// }
-
-
-// task generateLibrary(dependsOn: generateObjects) {
-//     doLast {
-//         exec {
-//             commandLine "gcc", "-shared", "-Wall", "-o", "libworld.so", "$projectDir/swig/world_wrap.o", "$projectDir/World/build/libworld.a"
-//         }
-//     }
-// }
-
-// build.dependsOn generateLibrary
-
-// $(MYMOD)_java.$(SOEXT): $(JOBJS)
-//         $(LD) $(SOFLAGS) $@ $^
-//         @ /bin/ln -s $(MYMOD)_java.$(SOEXT) ./lib$(MYMOD)_java.$(SOEXT)
