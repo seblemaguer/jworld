@@ -29,10 +29,17 @@ test {
 
 task compileSwig(type: SwigTask) {
     description "Generate the JNI wrapping necessary files"
+
+    // FIXME
     verbose = true
+    enableCpp = true
+
+    // Pathes
     javaSourcesPath = new File("$projectDir/src/main/java/jworld")
     source = new File("$projectDir/swig/world.i")
-    wrapperTargetFile = new File("$projectDir/build/world_wrap.c")
+    wrapperTargetFile = new File("$projectDir/build/world_wrap.cpp")
+
+    // Java info
     module = "World"
     packageName = "jworld"
 }
@@ -41,12 +48,13 @@ task compileObjects(dependsOn: compileSwig) {
     description "Compiling the objects"
 
     def JAVA_HOME = System.properties['java.home'] + "/.."
-
+    inputs.files "$buildDir/world_wrap.cpp"
+    outputs.files "$buildDir/world_wrap.o"
     buildDir.mkdirs()
     doLast {
 
         exec {
-            commandLine "gcc", "-fpic", "-c", "$buildDir/world_wrap.c", "-o", "$buildDir/world_wrap.o", "-I${JAVA_HOME}/include/", "-I${JAVA_HOME}/include/linux"
+            commandLine "g++", "-Wall", "-fpic", "-c", "$buildDir/world_wrap.cpp", "-o", "$buildDir/world_wrap.o", "-I${JAVA_HOME}/include/", "-I${JAVA_HOME}/include/linux", "-IWorld/src"
         }
     }
 }
@@ -56,9 +64,24 @@ task generateLibrary(dependsOn: compileObjects) {
     (new File("$buildDir/lib")).mkdirs()
     doLast {
         exec {
-            commandLine "gcc", "-shared", "$projectDir/World/build/libworld.a",  "$buildDir/world_wrap.o", "-o", "$buildDir/lib/libworld.so"
+            // "$projectDir/World/build/libworld.a",
+
+            commandLine "g++", "-shared",
+                "-Wl,--no-undefined",
+                // "$projectDir/World/build/libworld.a",
+                "World/build/objs/world/matlabfunctions.o", "World/build/objs/world/common.o", "World/build/objs/world/d4c.o", "World/build/objs/world/fft.o", "World/build/objs/world/synthesis.o",
+                "$buildDir/world_wrap.o",
+                "-o", "$buildDir/lib/libworld.so"
         }
     }
 }
+
+
+// "World/build/objs/world/cheaptrick.o", "World/build/objs/world/common.o", "World/build/objs/world/d4c.o",
+// "World/build/objs/world/dio.o", "World/build/objs/world/fft.o", "World/build/objs/world/harvest.o",
+// "World/build/objs/world/matlabfunctions.o", "World/build/objs/world/stonemask.o",
+// "World/build/objs/world/synthesis.o",
+// "World/build/objs/tools/audioio.o",
+// "-lm",
 
 compileJava.dependsOn generateLibrary
