@@ -40,21 +40,33 @@ public class JWorldWrapper
         }
     }
 
-    // Swig wrappers
+    // Signal swig wrapper
     private SWIGTYPE_p_double x;
     private int x_length;
 
-
+    // F0/time swig wrappers
     private SWIGTYPE_p_double f0_cached;
+    private SWIGTYPE_p_double time_axis;
     private int f0_length;
 
+    // The signal input stream
     private AudioInputStream input_stream;
 
-    private SWIGTYPE_p_double time_axis;
-
+    // Some needed informations
     private int sample_rate;
     private double frame_period;
+    private int speed;
+    private double f0_floor;
+    private double f0_allowed_range;
+    private double q1;
 
+
+    /**
+     *  The "synthesis mode" constructor.
+     *
+     *  @param sample_rate the sample rate of the produced wave
+     *  @param frame_period the frame period used during the extraction stage
+     */
     public JWorldWrapper(int sample_rate, double frame_period)
     {
         input_stream = null;
@@ -62,66 +74,54 @@ public class JWorldWrapper
         setSampleRate(sample_rate);
         x = null;
     }
-    public JWorldWrapper(AudioInputStream ais) throws Exception
+
+    /**
+     *  The "analysis mode" constructor
+     *
+     *  @param ais the audioinputstream filled with audio information
+     */
+    public JWorldWrapper(AudioInputStream ais) throws IOException
     {
         input_stream = ais;
         this.fromAISToDoubleArray();
         setFramePeriod(5.0);
+        setQ1(-0.15);
+        setF0Floor(71.0);
+        setF0AllowedRange(0.1);
+        setSpeed(1);
         setSampleRate((int) ais.getFormat().getSampleRate());
     }
 
 
-    public double getFramePeriod() {
-        return frame_period;
-    }
+    /*****************************************************************************************************
+     ** Analysis entry part
+     *****************************************************************************************************/
 
-    public void setFramePeriod(double frame_period) {
-        this.frame_period = frame_period;
-    }
-
-    public int getSampleRate() {
-        return sample_rate;
-    }
-
-    public void setSampleRate(int sample_rate) {
-        this.sample_rate = sample_rate;
-    }
-
-
-    private void fromAISToDoubleArray() throws Exception {
-
-        // Load data
-        int bytesToRead = this.input_stream.available();
-        byte[] data = new byte[bytesToRead];
-        int bytesRead = this.input_stream.read(data);
-        if (bytesToRead != bytesRead)
-            throw new IllegalStateException("read only " + bytesRead + " of " + bytesToRead + " bytes");
-
-        // Convert to swig double array
-        int n = data.length;
-        this.x_length = n/2;
-        this.x = World.new_double_array(this.x_length);
-        for (int i = 0; i < this.x_length; i++) {
-            double v = ((short) (((data[2*i+1] & 0xFF) << 8) + (data[2*i] & 0xFF))) / ((double) MAX_16_BIT);
-            World.double_array_setitem(x, i, v);
-        }
-    }
-
+    /**
+     *  Method to extract the F0 in alaysis mode
+     *
+     *  @param cached should the extraction be keeped in the cache? (needed if spectrum and/or aperiodicity should be extracted after!)
+     *  @return the extracted f0
+     *  @throws JWorldException if we are not in analysis mode !
+     */
     public double[] extractF0(boolean cached) throws JWorldException{
         if (x == null)
             throw new JWorldException("Samples should be loaded, you should use the constructor which expect a AudioInputStream as parameter");
+
+        // Compute length based on information
         int f0_length = World.GetSamplesForDIO(getSampleRate(), x_length, getFramePeriod());
-        System.out.println(f0_length);
+
+        // allocate needed memory
         SWIGTYPE_p_double tmp_f0 = World.new_double_array(f0_length);
         time_axis = World.new_double_array(f0_length);
 
         // Set options
         DioOption opt = new DioOption();
         World.InitializeDioOption(opt);
-        opt.setSpeed(1);
+        opt.setSpeed(getSpeed());
         opt.setFrame_period(getFramePeriod());
-        opt.setF0_floor(71.0); // FIXME: hardcode
-        opt.setAllowed_range(0.1); // FIXME: hardcode
+        opt.setF0_floor(getF0Floor());
+        opt.setAllowed_range(getF0AllowedRange());
 
         // Extract F0
         World.Dio(x, x_length,
@@ -147,12 +147,21 @@ public class JWorldWrapper
             f0[i] = World.double_array_getitem(f0_cached, i);
         }
 
+        // Cleaning memory
         if (! cached) {
             World.delete_double_array(f0_cached);
+            World.delete_double_array(time_axis);
         }
+
         return f0;
     }
 
+    /**
+     *  Method to extract the spectrum in alaysis mode
+     *
+     *  @return the extracted spectrum with the shape (nb_frames, fft_size/2+1)
+     *  @throws JWorldException if the F0 has not been extracted and cached!
+     */
     public double[][] extractSP() throws JWorldException{
         if (f0_cached == null)
             throw new JWorldException("To extract the spectrum, the F0 must be cached when extracted!");
@@ -160,8 +169,8 @@ public class JWorldWrapper
         CheapTrickOption opt = new CheapTrickOption();
         World.InitializeCheapTrickOption(getSampleRate(), opt);
 
-        opt.setQ1(-0.15); // FIXME: hardcode
-        opt.setF0_floor(71.0); // FIXME: hardcode
+        opt.setQ1(getQ1());
+        opt.setF0_floor(getF0Floor());
 
         // Compute FFT size
         int fft_size = World.GetFFTSizeForCheapTrick(getSampleRate(), opt);
@@ -194,6 +203,12 @@ public class JWorldWrapper
         return spec;
     }
 
+    /**
+     *  Method to extract the aperiodicity in alaysis mode
+     *
+     *  @return the extracted aperiodicity with the shape (nb_frames, fft_size/2+1)
+     *  @throws JWorldException if the F0 has not been extracted and cached!
+     */
     public double[][] extractAP() throws JWorldException{
         if (f0_cached == null)
             throw new JWorldException("To extract the aperiodicity, the F0 must be cached when extracted!");
@@ -202,8 +217,8 @@ public class JWorldWrapper
         CheapTrickOption ch_opt = new CheapTrickOption();
         World.InitializeCheapTrickOption(getSampleRate(), ch_opt);
 
-        ch_opt.setQ1(-0.15); // FIXME: hardcode
-        ch_opt.setF0_floor(71.0); // FIXME: hardcode
+        ch_opt.setQ1(getQ1());
+        ch_opt.setF0_floor(getF0Floor());
 
         // Compute FFT size
         int fft_size = World.GetFFTSizeForCheapTrick(getSampleRate(), ch_opt);
@@ -240,12 +255,19 @@ public class JWorldWrapper
         return ap;
     }
 
-    public void clean() {
-        World.delete_double_array(f0_cached);
-        World.delete_double_array(time_axis);
-        World.delete_double_array(x);
-    }
+    /*****************************************************************************************************
+     ** Synthesis entry part
+     *****************************************************************************************************/
 
+    /**
+     *  Method to generate an audio based on given vocoder parameters.
+     *  Should be called if the object is in synthesis mode!
+     *
+     *  @param f0 the F0
+     *  @param sp the spectrum
+     *  @param ap the aperiodicity
+     *  @return the filled audioinputstream containing the rendered results
+     */
     public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap) {
         int fft_len = sp[0].length - 1;
 
@@ -304,4 +326,96 @@ public class JWorldWrapper
 
         return ais;
     }
+
+    /*****************************************************************************************************
+     ** Accessors
+     *****************************************************************************************************/
+
+    public double getFramePeriod() {
+        return frame_period;
+    }
+
+    public void setFramePeriod(double frame_period) {
+        this.frame_period = frame_period;
+    }
+
+    public int getSampleRate() {
+        return sample_rate;
+    }
+
+    public void setSampleRate(int sample_rate) {
+        this.sample_rate = sample_rate;
+    }
+
+    public double getQ1() {
+        return q1;
+    }
+
+    public void setQ1(double q1) {
+        this.q1 = q1;
+    }
+
+    public double getF0AllowedRange() {
+        return f0_allowed_range;
+    }
+
+    public void setF0AllowedRange(double f0_allowed_range) {
+        this.f0_allowed_range = f0_allowed_range;
+    }
+
+    public double getF0Floor() {
+        return f0_floor;
+    }
+
+    public void setF0Floor(double f0_floor) {
+        this.f0_floor = f0_floor;
+    }
+
+    public int getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(int speed) {
+        this.speed = speed;
+    }
+
+
+    /*****************************************************************************************************
+     ** Helpers
+     *****************************************************************************************************/
+    /**
+     *   Helper to extract the samples in a double array for the audio input stream
+     *
+     *   @throws IOException if a problem with the stream occurs!
+     */
+    private void fromAISToDoubleArray() throws IOException {
+
+        // Load data
+        int bytesToRead = this.input_stream.available();
+        byte[] data = new byte[bytesToRead];
+        int bytesRead = this.input_stream.read(data);
+        if (bytesToRead != bytesRead)
+            throw new IllegalStateException("read only " + bytesRead + " of " + bytesToRead + " bytes");
+
+        // Convert to swig double array
+        int n = data.length;
+        this.x_length = n/2;
+        this.x = World.new_double_array(this.x_length);
+        for (int i = 0; i < this.x_length; i++) {
+            double v = ((short) (((data[2*i+1] & 0xFF) << 8) + (data[2*i] & 0xFF))) / ((double) MAX_16_BIT);
+            World.double_array_setitem(x, i, v);
+        }
+    }
+
+
+    /**
+     *  Helper to clean the memory (=> can be seen as also converting the object into synthesis mode!)
+     *
+     */
+    public void clean() {
+        World.delete_double_array(f0_cached);
+        World.delete_double_array(time_axis);
+        World.delete_double_array(x);
+    }
+
 }
