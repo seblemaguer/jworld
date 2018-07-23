@@ -189,7 +189,6 @@ public class JWorldTest {
             // From bytes to double array :)
             DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
             sp = new double[f0.length][doubleBuffer.remaining()/f0.length];
-            System.out.println(sp[0].length);
             for (int t=0; t<f0.length; t++) {
                 doubleBuffer.get(sp[t]);
             }
@@ -201,7 +200,6 @@ public class JWorldTest {
         double[][] ap;
         try(FileChannel fc = (FileChannel) Files.newByteChannel(Paths.get("/home/slemaguer/test.ap"),
                                                                 StandardOpenOption.READ)) {
-
             // Loadfile
             ByteBuffer byteBuffer = ByteBuffer.allocate((int)fc.size());
             byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -216,7 +214,6 @@ public class JWorldTest {
             for (int t=0; t<f0.length; t++) {
                 doubleBuffer.get(ap[t]);
             }
-            System.out.println(ap[0][0]);
         } catch (IOException ex) {
             throw ex;
         }
@@ -237,18 +234,18 @@ public class JWorldTest {
             World.double_p_array_setitem(sp_s, t, row);
         }
 
-
         // Generate AP swig
         SWIGTYPE_p_p_double ap_s = World.new_double_p_array(ap.length);
         for (int t=0; t<ap.length; t++) {
             SWIGTYPE_p_double row = World.new_double_array(ap[0].length);
-            for (int i=0; i<ap[t].length; i++)
+            for (int i=0; i<ap[t].length; i++) {
                 World.double_array_setitem(row, i, ap[t][i]);
+            }
 
             World.double_p_array_setitem(ap_s, t, row);
         }
 
-
+        // Synthesise & adapt
         int y_length =  (int)((f0.length - 1) * frame_period / 1000.0 * fs) + 1;
         SWIGTYPE_p_double y_s = World.new_double_array(y_length);
         World.Synthesis(f0_s, f0.length,
