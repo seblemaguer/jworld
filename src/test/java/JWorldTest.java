@@ -74,7 +74,6 @@ public class JWorldTest {
         byteBuffer.put(bytes);
         byteBuffer.rewind();
 
-        int times = Double.SIZE / Byte.SIZE;
         double[] f0_ref = new double[byteBuffer.asDoubleBuffer().remaining()];
         byteBuffer.asDoubleBuffer().get(f0_ref);
 
@@ -91,10 +90,10 @@ public class JWorldTest {
 
     @Test
     public void extractSP() throws Exception {
+        URL url = JWorldTest.class.getResource("/vaiueo2d.wav");
+        AudioInputStream ais = AudioSystem.getAudioInputStream(url);
 
-        File file = new File("World/test/vaiueo2d.wav");
-        AudioInputStream ais = AudioSystem.getAudioInputStream(file);
-
+        // Extract spectrum
         JWorldWrapper jww = new JWorldWrapper(ais);
         double[] f0 = jww.extractF0(true);
         double[][] sp = jww.extractSP();
@@ -130,14 +129,13 @@ public class JWorldTest {
 
     @Test
     public void extractAP() throws Exception {
+        URL url = JWorldTest.class.getResource("/vaiueo2d.wav");
+        AudioInputStream ais = AudioSystem.getAudioInputStream(url);
 
-        File file = new File("World/test/vaiueo2d.wav");
-        AudioInputStream ais = AudioSystem.getAudioInputStream(file);
-
+        // Extract aperiodicity
         JWorldWrapper jww = new JWorldWrapper(ais);
         double[] f0 = jww.extractF0(true);
         double[][] ap = jww.extractAP();
-
 
         // Load aperiodicity bytes
         byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.ap"));
@@ -169,87 +167,59 @@ public class JWorldTest {
         // FIXME: Load some resources (not added to the repo for space, they should be produced by analysis first!!)
 
         //  - F0
-        double[] f0;
-        try(FileChannel fc = (FileChannel) Files.newByteChannel(Paths.get("/home/slemaguer/test.f0"),
-                                                                StandardOpenOption.READ)) {
 
-            // Loadfile
-            ByteBuffer byteBuffer = ByteBuffer.allocate((int)fc.size());
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            fc.read(byteBuffer);
+        // Load reference F0
+        byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.f0"));
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
 
-            // Rewind to be at 0!
-            byteBuffer.rewind();
-
-            // From bytes to double array :)
-            DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
-            f0 = new double[doubleBuffer.remaining()];
-            doubleBuffer.get(f0);
-        } catch (IOException ex) {
-            throw ex;
-        }
+        double[] f0 = new double[byteBuffer.asDoubleBuffer().remaining()];
+        byteBuffer.asDoubleBuffer().get(f0);
 
         //  - SP
-        int sample_rate;
-        double frame_period;
 
-        double[][] sp;
-        try(FileChannel fc = (FileChannel) Files.newByteChannel(Paths.get("/home/slemaguer/test.sp"),
-                                                                StandardOpenOption.READ)) {
-            // Loadfile
-            ByteBuffer byteBuffer = ByteBuffer.allocate((int)fc.size());
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            fc.read(byteBuffer);
+        // Load spectrum bytes
+        bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.sp"));
+        byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
 
-            // Rewind to be at 0!
-            byteBuffer.rewind();
+        // Load spectrum header
+        int sample_rate = byteBuffer.getInt();
+        double frame_period = byteBuffer.getDouble();
 
-            // Get the sample rate
-            sample_rate = byteBuffer.getInt();
-
-            // Get the frame period
-            frame_period = byteBuffer.getDouble();
-
-            // From bytes to double array :)
-            DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
-            sp = new double[f0.length][doubleBuffer.remaining()/f0.length];
-            for (int t=0; t<f0.length; t++) {
-                doubleBuffer.get(sp[t]);
-            }
-        } catch (IOException ex) {
-            throw ex;
+        // Load actual reference spectrum
+        DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
+        double[][] sp = new double[f0.length][doubleBuffer.remaining()/f0.length];
+        for(int t=0; t<f0.length; t++){
+            doubleBuffer.get(sp[t]);
         }
 
         //  - AP
-        double[][] ap;
-        try(FileChannel fc = (FileChannel) Files.newByteChannel(Paths.get("/home/slemaguer/test.ap"),
-                                                                StandardOpenOption.READ)) {
-            // Loadfile
-            ByteBuffer byteBuffer = ByteBuffer.allocate((int)fc.size());
-            byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
-            fc.read(byteBuffer);
+        // Load aperiodicity bytes
+        bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.ap"));
+        byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
 
-            // Rewind to be at 0!
-            byteBuffer.rewind();
-
-            // From bytes to double array :)
-            DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
-            ap = new double[f0.length][doubleBuffer.remaining()/f0.length];
-            for (int t=0; t<f0.length; t++) {
-                doubleBuffer.get(ap[t]);
-            }
-        } catch (IOException ex) {
-            throw ex;
+        // Load actual reference aperiodicity
+        doubleBuffer = byteBuffer.asDoubleBuffer();
+        double[][] ap = new double[f0.length][doubleBuffer.remaining()/f0.length];
+        for(int t=0; t<f0.length; t++){
+            doubleBuffer.get(ap[t]);
         }
 
-        // Saving as a check part
+        // Synthesize
         JWorldWrapper jww = new JWorldWrapper(sample_rate, frame_period);
         AudioInputStream ais = jww.synthesis(f0, sp, ap);
-        JWorldTest.save("/home/slemaguer/tata.wav", ais);
 
         // Load reference
-        File file = new File("/home/slemaguer/test_reb.wav");
-        AudioInputStream ref_ais = AudioSystem.getAudioInputStream(file);
+        URL url = JWorldTest.class.getResource("/vaiueo2d_rec.wav");
+        AudioInputStream ref_ais = AudioSystem.getAudioInputStream(url);
 
         // Assert equality
         Assert.assertEquals(ref_ais, ais);
