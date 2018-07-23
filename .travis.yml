@@ -1,0 +1,21 @@
+# System part
+os:
+  - linux
+sudo: required
+
+# Java specific
+language: java
+jdk:
+  - openjdk8
+
+# Installation
+before_install:
+  sudo apt-get install gcc g++ swig;
+  git clone --depth=50 --branch=master https://github.com/mmorise/World.git seblemaguer/jworld/World
+
+install: ./gradlew b
+
+# Gradle specific
+cache:
+  directories:
+  - $HOME/.gradle
