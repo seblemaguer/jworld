@@ -97,6 +97,33 @@ public class JWorldTest {
         JWorldWrapper jww = new JWorldWrapper(ais);
         double[] f0 = jww.extractF0(true);
         double[][] sp = jww.extractSP();
+
+
+        byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.sp"));
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
+
+        // Ignore spectrum header
+        byteBuffer.getInt(); byteBuffer.getDouble();
+        DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
+
+        // Load actual reference spectrum
+        double[][] sp_ref = new double[f0.length][doubleBuffer.remaining()/f0.length];
+        for(int t=0; t<f0.length; t++){
+            doubleBuffer.get(sp_ref[t]);
+        }
+
+        // Assert !
+        Assert.assertEquals(sp_ref.length, sp.length);
+        Assert.assertEquals(sp_ref[0].length, sp[0].length);
+        for (int t=0; t<f0.length; t++) {
+            for (int i=0; i<sp[t].length; i++) {
+                System.out.println("test: " + sp_ref[t][i] + " =? " + sp[t][i]);
+                Assert.assertEquals(sp_ref[t][i], sp[t][i], 0.001); // FIXME: check problem for rounding doubles!
+            }
+        }
     }
 
 
