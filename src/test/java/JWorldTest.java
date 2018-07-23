@@ -1,7 +1,6 @@
 // Testing
 import org.testng.Assert;
 import org.testng.annotations.*;
-import cz.adamh.utils.NativeUtils;
 
 // Audio
 import javax.sound.sampled.AudioFormat;
@@ -28,32 +27,6 @@ import java.util.Arrays;
 import jworld.*;
 
 public class JWorldTest {
-
-    static {
-        try {
-            NativeUtils.loadLibraryFromJar("/libworld.so");
-        } catch (IOException e) {
-            e.printStackTrace(); // This is probably not the best way to handle exception :-)
-        }
-    }
-
-
-    /**
-     * Reads audio samples from a file (in .wav or .au format) and returns
-     * them as a double array with values between -1.0 and +1.0.
-     *
-     * @param  filename the name of the audio file
-     * @return the array of samples
-     */
-    public static double[] load(String filename) {
-        byte[] data = readByte(filename);
-        int n = data.length;
-        double[] d = new double[n/2];
-        for (int i = 0; i < n/2; i++) {
-            d[i] = ((short) (((data[2*i+1] & 0xFF) << 8) + (data[2*i] & 0xFF))) / ((double) MAX_16_BIT);
-        }
-        return d;
-    }
 
     // return data as a byte array
     private static byte[] readByte(String filename) {
@@ -104,25 +77,10 @@ public class JWorldTest {
      * @throws IllegalArgumentException if unable to save {@code filename}
      * @throws IllegalArgumentException if {@code samples} is {@code null}
      */
-    public static void save(String filename, double[] samples, int sample_rate) {
-        if (samples == null) {
-            throw new IllegalArgumentException("samples[] is null");
-        }
-
-        // assumes 44,100 samples per second
-        // use 16-bit audio, mono, signed PCM, little Endian
-        AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);
-        byte[] data = new byte[2 * samples.length];
-        for (int i = 0; i < samples.length; i++) {
-            int temp = (short) (samples[i] * MAX_16_BIT);
-            data[2*i + 0] = (byte) temp;
-            data[2*i + 1] = (byte) (temp >> 8);
-        }
+    public static void save(String filename, AudioInputStream ais) {
 
         // now save the file
         try {
-            ByteArrayInputStream bais = new ByteArrayInputStream(data);
-            AudioInputStream ais = new AudioInputStream(bais, format, samples.length);
             if (filename.endsWith(".wav") || filename.endsWith(".WAV")) {
                 AudioSystem.write(ais, AudioFileFormat.Type.WAVE, new File(filename));
             }
@@ -142,7 +100,6 @@ public class JWorldTest {
     @Test
     public void testSynthesis() throws Exception {
         // FIXME: Load some resources (not added to the repo for space, they should be produced by analysis first!!)
-        int fft_len = 1024;
 
         //  - F0
         double[] f0;
@@ -166,7 +123,7 @@ public class JWorldTest {
         }
 
         //  - SP
-        int fs;
+        int sample_rate;
         double frame_period;
 
         double[][] sp;
@@ -181,7 +138,7 @@ public class JWorldTest {
             byteBuffer.rewind();
 
             // Get the sample rate
-            fs = byteBuffer.getInt();
+            sample_rate = byteBuffer.getInt();
 
             // Get the frame period
             frame_period = byteBuffer.getDouble();
@@ -218,53 +175,16 @@ public class JWorldTest {
             throw ex;
         }
 
-        // Generate F0 swig
-        SWIGTYPE_p_double f0_s = World.new_double_array(f0.length);
-        for (int i=0; i<f0.length; i++) {
-            World.double_array_setitem(f0_s, i, f0[i]);
-        }
-
-        // Generate SP swig
-        SWIGTYPE_p_p_double sp_s = World.new_double_p_array(sp.length);
-        for (int t=0; t<sp.length; t++) {
-            SWIGTYPE_p_double row = World.new_double_array(sp[0].length);
-            for (int i=0; i<sp[t].length; i++)
-                World.double_array_setitem(row, i, sp[t][i]);
-
-            World.double_p_array_setitem(sp_s, t, row);
-        }
-
-        // Generate AP swig
-        SWIGTYPE_p_p_double ap_s = World.new_double_p_array(ap.length);
-        for (int t=0; t<ap.length; t++) {
-            SWIGTYPE_p_double row = World.new_double_array(ap[0].length);
-            for (int i=0; i<ap[t].length; i++) {
-                World.double_array_setitem(row, i, ap[t][i]);
-            }
-
-            World.double_p_array_setitem(ap_s, t, row);
-        }
-
-        // Synthesise & adapt
-        int y_length =  (int)((f0.length - 1) * frame_period / 1000.0 * fs) + 1;
-        SWIGTYPE_p_double y_s = World.new_double_array(y_length);
-        World.Synthesis(f0_s, f0.length,
-                        sp_s, ap_s,
-                        fft_len, frame_period, fs,
-                        y_length, y_s);
-
-        double[] y = new double[y_length];
-        for (int i=0; i<y_length; i++) {
-            y[i] = World.double_array_getitem(y_s, i);
-        }
-
         // Saving as a check part
-        JWorldTest.save("/home/slemaguer/tata.wav", y, fs);
+        JWorldWrapper jww = new JWorldWrapper();
+        AudioInputStream ais = jww.synthesis(f0, sp, ap, sample_rate, frame_period);
+        JWorldTest.save("/home/slemaguer/tata.wav", ais);
 
         // Load reference
-        double[] y_ref = load("/home/slemaguer/test_reb.wav");
+        File file = new File("/home/slemaguer/test_reb.wav");
+        AudioInputStream ref_ais = AudioSystem.getAudioInputStream(file);
 
         // Assert equality
-        Assert.assertTrue(Arrays.equals(y_ref, y));
+        Assert.assertEquals(ref_ais, ais);
     }
 }
