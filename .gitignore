@@ -1,5 +1,13 @@
 #SWIG
 swig/
+src/main/java/jworld/CheapTrickOption.java
+src/main/java/jworld/D4COption.java
+src/main/java/jworld/DioOption.java
+src/main/java/jworld/SWIGTYPE_p_D4COption.java
+src/main/java/jworld/SWIGTYPE_p_double.java
+src/main/java/jworld/SWIGTYPE_p_p_double.java
+src/main/java/jworld/World.java
+src/main/java/jworld/WorldJNI.java
 
 # Gradle
 .gradle/
