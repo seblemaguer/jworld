@@ -77,9 +77,10 @@ public class JWorldTest {
         int times = Double.SIZE / Byte.SIZE;
         double[] f0_ref = new double[byteBuffer.asDoubleBuffer().remaining()];
         byteBuffer.asDoubleBuffer().get(f0_ref);
-        for(int i=0;i<f0_ref.length;i++){
-            System.out.println("test: " + f0[i] + " =? " + f0_ref[i]);
-        }
+
+        // for(int i=0;i<f0_ref.length;i++){
+        //     System.out.println("test f0: " + f0[i] + " =? " + f0_ref[i]);
+        // }
 
         // Assert !
         Assert.assertEquals(f0.length, f0_ref.length);
@@ -98,7 +99,7 @@ public class JWorldTest {
         double[] f0 = jww.extractF0(true);
         double[][] sp = jww.extractSP();
 
-
+        // Load spectrum bytes
         byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.sp"));
         ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -120,7 +121,7 @@ public class JWorldTest {
         Assert.assertEquals(sp_ref[0].length, sp[0].length);
         for (int t=0; t<f0.length; t++) {
             for (int i=0; i<sp[t].length; i++) {
-                System.out.println("test: " + sp_ref[t][i] + " =? " + sp[t][i]);
+                // System.out.println("test sp: " + sp_ref[t][i] + " =? " + sp[t][i]);
                 Assert.assertEquals(sp_ref[t][i], sp[t][i], 0.001); // FIXME: check problem for rounding doubles!
             }
         }
@@ -136,6 +137,31 @@ public class JWorldTest {
         JWorldWrapper jww = new JWorldWrapper(ais);
         double[] f0 = jww.extractF0(true);
         double[][] ap = jww.extractAP();
+
+
+        // Load aperiodicity bytes
+        byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.ap"));
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
+
+        // Load actual reference aperiodicity
+        DoubleBuffer doubleBuffer = byteBuffer.asDoubleBuffer();
+        double[][] ap_ref = new double[f0.length][doubleBuffer.remaining()/f0.length];
+        for(int t=0; t<f0.length; t++){
+            doubleBuffer.get(ap_ref[t]);
+        }
+
+        // Assert !
+        Assert.assertEquals(ap_ref.length, ap.length);
+        Assert.assertEquals(ap_ref[0].length, ap[0].length);
+        for (int t=0; t<f0.length; t++) {
+            for (int i=0; i<ap[t].length; i++) {
+                // System.out.println("test ap: " + ap_ref[t][i] + " =? " + ap[t][i]);
+                Assert.assertEquals(ap_ref[t][i], ap[t][i], 0.001); // FIXME: check problem for rounding doubles!
+            }
+        }
     }
 
     // @Test
