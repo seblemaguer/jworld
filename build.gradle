@@ -28,7 +28,17 @@ test {
     // environment "DYLD_LIBRARY_PATH":  "$buildDir"
 }
 
-task compileSwig(type: SwigTask) {
+task compileWorld() {
+    description "Compiling stock world!"
+
+    outputs.files "World/build/libworld.a"
+    exec {
+        workingDir "World"
+        commandLine "make"
+    }
+}
+
+task compileSwig(type: SwigTask, dependsOn: compileWorld) {
     description "Generate the JNI wrapping necessary files"
 
     // FIXME
