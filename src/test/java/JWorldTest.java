@@ -67,6 +67,20 @@ public class JWorldTest {
             System.out.println(f0[i]);
     }
 
+
+    @Test
+    public void extractSP() throws Exception {
+
+        File file = new File("World/test/vaiueo2d.wav");
+        AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+
+        JWorldWrapper jww = new JWorldWrapper(ais);
+        double[] f0 = jww.extractF0(true);
+        double[][] sp = jww.extractSP();
+    }
+
+
+
     // @Test
     public void testSynthesis() throws Exception {
         // FIXME: Load some resources (not added to the repo for space, they should be produced by analysis first!!)
