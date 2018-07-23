@@ -109,7 +109,7 @@ public class JWorldWrapper
             throw new JWorldException("Samples should be loaded, you should use the constructor which expect a AudioInputStream as parameter");
 
         // Compute length based on information
-        int f0_length = World.GetSamplesForDIO(getSampleRate(), x_length, getFramePeriod());
+        f0_length = World.GetSamplesForDIO(getSampleRate(), x_length, getFramePeriod());
 
         // allocate needed memory
         SWIGTYPE_p_double tmp_f0 = World.new_double_array(f0_length);
