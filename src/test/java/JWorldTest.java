@@ -23,6 +23,10 @@ import java.nio.channels.FileChannel;
 
 import java.util.Arrays;
 
+import java.net.URL;
+
+import com.google.common.io.ByteStreams;
+
 // Example interface
 import jworld.*;
 
@@ -57,14 +61,30 @@ public class JWorldTest {
 
     @Test
     public void extractF0() throws Exception {
-
-        File file = new File("World/test/vaiueo2d.wav");
-        AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+        URL url = JWorldTest.class.getResource("/vaiueo2d.wav");
+        AudioInputStream ais = AudioSystem.getAudioInputStream(url);
 
         JWorldWrapper jww = new JWorldWrapper(ais);
         double[] f0 = jww.extractF0(false);
-        for (int i=0; i<f0.length; i++)
-            System.out.println(f0[i]);
+
+        // Load reference F0
+        byte[] bytes = ByteStreams.toByteArray(JWorldTest.class.getResourceAsStream("/test.f0"));
+        ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes);
+        byteBuffer.rewind();
+
+        int times = Double.SIZE / Byte.SIZE;
+        double[] f0_ref = new double[byteBuffer.asDoubleBuffer().remaining()];
+        byteBuffer.asDoubleBuffer().get(f0_ref);
+        for(int i=0;i<f0_ref.length;i++){
+            System.out.println("test: " + f0[i] + " =? " + f0_ref[i]);
+        }
+
+        // Assert !
+        Assert.assertEquals(f0.length, f0_ref.length);
+        for (int t=0; t<f0.length; t++)
+            Assert.assertEquals(f0[t], f0_ref[t], 0.00001);
     }
 
 

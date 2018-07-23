@@ -11,6 +11,7 @@ repositories {
 
 dependencies {
     testCompile group: 'org.testng', name: 'testng', version: '6.8.13'
+    testCompile group: 'com.google.guava', name: 'guava', version: '18.0'
 }
 
 sourceSets {
