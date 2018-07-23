@@ -28,47 +28,6 @@ import jworld.*;
 
 public class JWorldTest {
 
-    // return data as a byte array
-    private static byte[] readByte(String filename) {
-        byte[] data = null;
-        AudioInputStream ais = null;
-        try {
-
-            // try to read from file
-            File file = new File(filename);
-            if (file.exists()) {
-                ais = AudioSystem.getAudioInputStream(file);
-                int bytesToRead = ais.available();
-                data = new byte[bytesToRead];
-                int bytesRead = ais.read(data);
-                if (bytesToRead != bytesRead)
-                    throw new IllegalStateException("read only " + bytesRead + " of " + bytesToRead + " bytes");
-            }
-
-            // // try to read from URL
-            // else {
-            //     URL url = StdAudio.class.getResource(filename);
-            //     ais = AudioSystem.getAudioInputStream(url);
-            //     int bytesToRead = ais.available();
-            //     data = new byte[bytesToRead];
-            //     int bytesRead = ais.read(data);
-            //     if (bytesToRead != bytesRead)
-            //         throw new IllegalStateException("read only " + bytesRead + " of " + bytesToRead + " bytes");
-            // }
-        }
-        catch (IOException e) {
-            throw new IllegalArgumentException("could not read '" + filename + "'", e);
-        }
-
-        catch (UnsupportedAudioFileException e) {
-            throw new IllegalArgumentException("unsupported audio format: '" + filename + "'", e);
-        }
-
-        return data;
-    }
-
-    private static final double MAX_16_BIT = Short.MAX_VALUE;     // 32,767
-
     /**
      * Saves the double array as an audio file (using .wav or .au format).
      *
@@ -176,8 +135,8 @@ public class JWorldTest {
         }
 
         // Saving as a check part
-        JWorldWrapper jww = new JWorldWrapper();
-        AudioInputStream ais = jww.synthesis(f0, sp, ap, sample_rate, frame_period);
+        JWorldWrapper jww = new JWorldWrapper(sample_rate, frame_period);
+        AudioInputStream ais = jww.synthesis(f0, sp, ap);
         JWorldTest.save("/home/slemaguer/tata.wav", ais);
 
         // Load reference
