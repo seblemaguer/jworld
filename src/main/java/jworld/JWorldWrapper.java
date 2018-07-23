@@ -107,7 +107,9 @@ public class JWorldWrapper
         }
     }
 
-    public double[] extractF0(boolean cached) {
+    public double[] extractF0(boolean cached) throws JWorldException{
+        if (x == null)
+            throw new JWorldException("Samples should be loaded, you should use the constructor which expect a AudioInputStream as parameter");
         int f0_length = World.GetSamplesForDIO(getSampleRate(), x_length, getFramePeriod());
         System.out.println(f0_length);
         SWIGTYPE_p_double tmp_f0 = World.new_double_array(f0_length);
@@ -151,9 +153,9 @@ public class JWorldWrapper
         return f0;
     }
 
-    public double[][] extractSP() throws Exception {
+    public double[][] extractSP() throws JWorldException{
         if (f0_cached == null)
-            throw new Exception("To extract the spectrum, the F0 must be cached when extracted!");
+            throw new JWorldException("To extract the spectrum, the F0 must be cached when extracted!");
 
         CheapTrickOption opt = new CheapTrickOption();
         World.InitializeCheapTrickOption(getSampleRate(), opt);
@@ -192,8 +194,50 @@ public class JWorldWrapper
         return spec;
     }
 
-    public double[][] extractAP(double[] x) {
-        return null;
+    public double[][] extractAP() throws JWorldException{
+        if (f0_cached == null)
+            throw new JWorldException("To extract the aperiodicity, the F0 must be cached when extracted!");
+
+        // Get FFT size
+        CheapTrickOption ch_opt = new CheapTrickOption();
+        World.InitializeCheapTrickOption(getSampleRate(), ch_opt);
+
+        ch_opt.setQ1(-0.15); // FIXME: hardcode
+        ch_opt.setF0_floor(71.0); // FIXME: hardcode
+
+        // Compute FFT size
+        int fft_size = World.GetFFTSizeForCheapTrick(getSampleRate(), ch_opt);
+
+        D4COption d4c_opt = new D4COption();
+        World.InitializeD4COption(d4c_opt);
+
+        // Allocate memory
+        SWIGTYPE_p_p_double ap_tmp = World.new_double_p_array(f0_length);
+        for (int t=0; t<f0_length; t++)
+            World.double_p_array_setitem(ap_tmp, t,
+                                         World.new_double_array(fft_size/2+1));
+
+        // Extract aperiodicity
+        World.D4C(x, x_length,
+                  getSampleRate(), time_axis,
+                  f0_cached, f0_length,
+                  fft_size, d4c_opt,
+                  ap_tmp);
+
+        // Free the memory while generating the java array
+        double[][] ap = new double[f0_length][fft_size/2+1];
+        for (int t=0; t<f0_length; t++) {
+            SWIGTYPE_p_double tmp = World.double_p_array_getitem(ap_tmp, t);
+
+            for (int i=0; i<ap[0].length; i++) {
+                ap[t][i] = World.double_array_getitem(tmp, i);
+            }
+
+            World.delete_double_array(tmp);
+        }
+        World.delete_double_p_array(ap_tmp);
+
+        return ap;
     }
 
     public void clean() {

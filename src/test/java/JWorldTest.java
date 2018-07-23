@@ -80,6 +80,16 @@ public class JWorldTest {
     }
 
 
+    @Test
+    public void extractAP() throws Exception {
+
+        File file = new File("World/test/vaiueo2d.wav");
+        AudioInputStream ais = AudioSystem.getAudioInputStream(file);
+
+        JWorldWrapper jww = new JWorldWrapper(ais);
+        double[] f0 = jww.extractF0(true);
+        double[][] ap = jww.extractAP();
+    }
 
     // @Test
     public void testSynthesis() throws Exception {
