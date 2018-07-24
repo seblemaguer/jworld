@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/seblemaguer/jworld.svg)](https://travis-ci.org/seblemaguer/jworld)
+[![Build Status](https://travis-ci.org/marytts/jworld.svg)](https://travis-ci.org/marytts/jworld)
 
 # JWorld
 
