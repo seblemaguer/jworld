@@ -1,7 +1,6 @@
 # System part
 os:
   - linux
-sudo: required
 
 # Java specific
 language: java
@@ -9,9 +8,10 @@ jdk:
   - openjdk8
 
 # Installation
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install swig
+addons:
+  apt:
+    packages:
+    - swig
 
 scripts:
   ./gradlew b --info
