@@ -19,6 +19,9 @@ addons:
     packages:
     - swig
 
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install swig; fi
+
 scripts:
   ./gradlew b --info
 
