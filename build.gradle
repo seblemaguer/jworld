@@ -57,15 +57,24 @@ task compileSwig(type: SwigTask, dependsOn: compileWorld) {
 
 task compileObjects(dependsOn: compileSwig) {
     description "Compiling the objects"
-
-    def JAVA_HOME = System.properties['java.home'] + "/.."
     inputs.files "$buildDir/world_wrap.cpp"
     outputs.files "$buildDir/world_wrap.o"
     buildDir.mkdirs()
     doLast {
-
+        def javaHome = file(System.properties['java.home']).parent
+        def includes = [file("$javaHome/include")]
+        switch (org.gradle.internal.os.OperatingSystem.current()) {
+            case { it.isLinux() }:
+                includes << file("$javaHome/include/linux")
+                break
+            case { it.isMacOsX() }:
+                includes << file("$javaHome/include/darwin")
+                break
+        }
+        includes << file('World/src')
         exec {
-            commandLine "g++", "-Wall", "-fpic", "-c", "$buildDir/world_wrap.cpp", "-o", "$buildDir/world_wrap.o", "-I${JAVA_HOME}/include/", "-I${JAVA_HOME}/include/linux", "-IWorld/src"
+            commandLine = ["g++", "-Wall", "-fpic", "-c", "$buildDir/world_wrap.cpp", "-o", "$buildDir/world_wrap.o"] +
+                    includes.collect { "-I$it.path" }
         }
     }
 }
@@ -74,16 +83,24 @@ task generateLibrary(dependsOn: compileObjects) {
     description "Generate the shared library to be used"
     (new File("$buildDir/lib")).mkdirs()
     doLast {
+        def ldFlags
+        switch (org.gradle.internal.os.OperatingSystem.current()) {
+            case { it.isLinux() }:
+                ldFlags = ['-Wl,--no-undefined']
+                break
+            case { it.isMacOsX() }:
+                ldFlags = ['-Wl', '-undefined', 'error']
+                break
+        }
         exec {
-            commandLine "g++", "-shared",
-                "-Wl,--no-undefined",
-                "World/build/objs/world/matlabfunctions.o", "World/build/objs/world/common.o",
-                "World/build/objs/world/d4c.o", "World/build/objs/world/dio.o",
-                "World/build/objs/world/cheaptrick.o", "World/build/objs/world/stonemask.o",
-                "World/build/objs/world/fft.o",
-                "World/build/objs/world/synthesis.o",
-                "$buildDir/world_wrap.o",
-                "-o", "$buildDir/lib/libworld.so"
+            commandLine = ["g++", "-shared"] + ldFlags +
+                    ["World/build/objs/world/matlabfunctions.o", "World/build/objs/world/common.o",
+                     "World/build/objs/world/d4c.o", "World/build/objs/world/dio.o",
+                     "World/build/objs/world/cheaptrick.o", "World/build/objs/world/stonemask.o",
+                     "World/build/objs/world/fft.o",
+                     "World/build/objs/world/synthesis.o",
+                     "$buildDir/world_wrap.o",
+                     "-o", "$buildDir/lib/libworld.so"]
         }
     }
 }
