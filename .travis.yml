@@ -8,6 +8,7 @@ matrix:
   include:
     - os: linux
       jdk: openjdk8
+    - os: osx
 
 # Java specific
 language: java
