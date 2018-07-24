@@ -4,13 +4,13 @@ branches:
     - master
 
 # System part
-os:
-  - linux
+matrix:
+  include:
+    - os: linux
+      jdk: openjdk8
 
 # Java specific
 language: java
-jdk:
-  - openjdk8
 
 # Installation
 addons:
