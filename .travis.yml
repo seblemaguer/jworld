@@ -25,7 +25,7 @@ before_install:
 scripts:
   ./gradlew b --info
 
-# Gradle specific
+# Caching
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
@@ -33,3 +33,4 @@ cache:
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
+    - $HOME/Library/Caches/Homebrew
