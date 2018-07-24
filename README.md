@@ -8,5 +8,4 @@ The world vocoder source code can be found here: https://github.com/mmorise/Worl
 
 ## Building
 
-1. clone World using `git clone https://github.com/mmorise/World.git World`
-2. Just run `./gradlew b`
+Just run `./gradlew b`
