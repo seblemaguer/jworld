@@ -1,7 +1,11 @@
 plugins {
     id "java"
+    id 'maven-publish'
     id "net.tribe-seven.swig" version "0.1.1"
 }
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 
 repositories {
@@ -106,3 +110,40 @@ task generateLibrary(dependsOn: compileObjects) {
 }
 
 compileJava.dependsOn generateLibrary
+
+
+
+
+/**********************************************************************************************
+ ** Project meta + publishing part
+ ***********************************************************************************************/
+version '0.5-SNAPSHOT'
+group "de.dfki.mary"
+description "Artifact containing a wrapper for the World vocoder"
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourceJar {
+                classifier 'sources'
+            }
+        }
+    }
+    repositories {
+        maven {
+            url "$rootProject.buildDir/repo"
+        }
+        maven {
+            url version.endsWith('-SNAPSHOT') ? 'https://oss.jfrog.org/artifactory/oss-snapshot-local' : ''
+            credentials {
+                username = findProperty('bintrayUser')
+                password = findProperty('bintrayApiKey')
+            }
+        }
+    }
+}
