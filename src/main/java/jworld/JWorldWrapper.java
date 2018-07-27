@@ -34,7 +34,7 @@ public class JWorldWrapper
 
     static {
         try {
-            NativeUtils.loadLibraryFromJar("/libworld.so");
+            NativeUtils.loadLibraryFromJar("/libworld.dylib");
         } catch (IOException e) {
             e.printStackTrace(); // This is probably not the best way to handle exception :-)
         }
