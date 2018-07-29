@@ -1,37 +1,29 @@
 package jworld;
 
-import cz.adamh.utils.NativeUtils;
+// IO
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
 // Audio
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
 
-// IO
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.nio.DoubleBuffer;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.Files;
-import java.nio.channels.FileChannel;
+import cz.adamh.utils.NativeUtils;
 
 
 /**
+ *  The wrapper class to be used to call the World vocoder.
  *
+ *  This class is wrapping the 2 modes (analysis and synthesis). The constructor used to build the
+ *  object is going to determine the mode in which the object should be used for.
  *
- * @author <a href="mailto:slemaguer@coli.uni-saarland.de">Sébastien Le Maguer</a>
+ *  For more information about the world vocoder, please have a look at the author website <a href="http://www.kki.yamanashi.ac.jp/~mmorise/world/english/">http://www.kki.yamanashi.ac.jp/~mmorise/world/english/</a>
+ *
+ *  @author <a href="mailto:slemaguer@coli.uni-saarland.de">Sébastien Le Maguer</a>
  */
 public class JWorldWrapper
 {
-
-    private static final double MAX_16_BIT = Short.MAX_VALUE;     // 32,767
-
+    /* Loading library part */
     static {
         String libResourceName;
         String osName = System.getProperty("os.name");
@@ -53,24 +45,25 @@ public class JWorldWrapper
     }
 
     // Signal swig wrapper
-    private SWIGTYPE_p_double x;
-    private int x_length;
+    private SWIGTYPE_p_double x; /*< The signal samples cached in swig format used in the analysis mode */
+    private int x_length; /*< the number of (double) samples in the signal used in the analysis mode */
 
     // F0/time swig wrappers
-    private SWIGTYPE_p_double f0_cached;
-    private SWIGTYPE_p_double time_axis;
-    private int f0_length;
+    private SWIGTYPE_p_double f0_cached; /*< the F0 values cached in swig format used in the analysis mode */
+    private SWIGTYPE_p_double time_axis; /*< the time axis cached in swig format used in the analysis mode */
+    private int f0_length; /*< the number of frames (based on the number of f0 values) used in the analysis mode */
 
     // The signal input stream
-    private AudioInputStream input_stream;
+    private AudioInputStream input_stream; /*< The audio input stream used in the analysis mode */
 
-    // Some needed informations
-    private int sample_rate;
-    private double frame_period;
-    private int speed;
-    private double f0_floor;
-    private double f0_allowed_range;
-    private double q1;
+    // Some options
+    private int sample_rate; /*< The sample rate of the signal */
+    private double frame_period; /*< The frame period in ms (default value: 5.0ms) */
+    private int speed; /*< The speed of the speech (default value: 1) */
+    private double f0_floor; /*< The lower F0 value in Hz (default value: 71Hz) */
+    private double f0_ceil; /*< The upper F0 value in Hz (default value: 800Hz) */
+    private double f0_allowed_range; /*< The threshold to fix f0 contour (default value: 0.1) */
+    private double q1; /*< The compensation lifter parameter used by cheapstick in the analysis mode (default value: -0.15) */
 
 
     /**
@@ -99,6 +92,7 @@ public class JWorldWrapper
         setFramePeriod(5.0);
         setQ1(-0.15);
         setF0Floor(71.0);
+        setF0Ceil(800.0);
         setF0AllowedRange(0.1);
         setSpeed(1);
         setSampleRate((int) ais.getFormat().getSampleRate());
@@ -328,7 +322,7 @@ public class JWorldWrapper
         AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);   // use 16-bit audio, mono, signed PCM, little Endian
         byte[] data = new byte[2 * y.length];
         for (int i = 0; i < y.length; i++) {
-            int temp = (short) (y[i] * MAX_16_BIT);
+            int temp = (short) (y[i] * Short.MAX_VALUE);
             data[2*i + 0] = (byte) temp;
             data[2*i + 1] = (byte) (temp >> 8);
         }
@@ -343,50 +337,137 @@ public class JWorldWrapper
      ** Accessors
      *****************************************************************************************************/
 
+    /**
+     *  Accessor to get the frame period
+     *
+     *  @return the frame period
+     */
     public double getFramePeriod() {
         return frame_period;
     }
 
+    /**
+     *  Accessor to set a new frame period (should be used before calling the analysis/synthesis methods)
+     *
+     *  @param frame_period the new frame period
+     */
     public void setFramePeriod(double frame_period) {
         this.frame_period = frame_period;
     }
 
+    /**
+     *  Accessor to get the sample rate
+     *
+     *  @return the sample rate in Hz
+     */
     public int getSampleRate() {
         return sample_rate;
     }
 
+    /**
+     *  Accessor to set a new sample rate for the synthesis mode! This should not be used in analysis mode!
+     *
+     *  @param sample_rate the new sample rate in Hz
+     */
     public void setSampleRate(int sample_rate) {
         this.sample_rate = sample_rate;
     }
 
+    /**
+     *  Accessor to get the compenstation lifter parameter used in analysis mode. This parameter s
+     *  ignored in synthesis mode.
+     *
+     *  @return the compensation lifter parameter
+     */
     public double getQ1() {
         return q1;
     }
 
+    /**
+     *  Accessor to set the compenstation lifter parameter used in analysis mode. This parameter is
+     *  ignored in synthesis mode.
+     *
+     *  @param q1 the new compensation lifter parameter value
+     */
     public void setQ1(double q1) {
         this.q1 = q1;
     }
 
+    /**
+     *  Accessor to get the threshold used for fixing the F0 contour in the analysis mode. This
+     *  parameter is ignored in synthesis mode.
+     *
+     *  @return the threshold value
+     */
     public double getF0AllowedRange() {
         return f0_allowed_range;
     }
 
+    /**
+     *  Accessor to set the threshold used for fixing the F0 contour in the analysis mode. This
+     *  parameter is ignored in synthesis mode.
+     *
+     *  @param f0_allowed_range the new threshold value
+     */
     public void setF0AllowedRange(double f0_allowed_range) {
         this.f0_allowed_range = f0_allowed_range;
     }
 
+    /**
+     *  Accessor to get the F0 floor value used in analysis mode. This parameter is ignored in
+     *  synthesis mode.
+     *
+     *  @return the F0 floor value
+     */
     public double getF0Floor() {
         return f0_floor;
     }
 
+    /**
+     *  Accessor to set the F0 floor value used in analysis mode. This parameter is ignored in
+     *  synthesis mode.
+     *
+     *  @param f0_floor the new F0 floor value
+     */
     public void setF0Floor(double f0_floor) {
         this.f0_floor = f0_floor;
     }
 
+    /**
+     *  Accessor to get the F0 ceil value used in analysis mode. This parameter is ignored in
+     *  synthesis mode.
+     *
+     *  @return the F0 ceil value
+     */
+    public double getF0Ceil() {
+        return f0_ceil;
+    }
+
+    /**
+     *  Accessor to set the F0 ceil value used in analysis mode. This parameter is ignored in
+     *  synthesis mode.
+     *
+     *  @param f0_ceil the new F0 ceil value
+     */
+    public void setF0Ceil(double f0_ceil) {
+        this.f0_ceil = f0_ceil;
+    }
+
+    /**
+     *  Accessor to get the speed of the speech.
+     *
+     *  @return the speed of the speech
+     */
     public int getSpeed() {
         return speed;
     }
 
+
+    /**
+     *  Accessor to set the speed of the speech.
+     *
+     *  @param speed the new value of the speed of the speech
+     */
     public void setSpeed(int speed) {
         this.speed = speed;
     }
@@ -414,14 +495,14 @@ public class JWorldWrapper
         this.x_length = n/2;
         this.x = World.new_double_array(this.x_length);
         for (int i = 0; i < this.x_length; i++) {
-            double v = ((short) (((data[2*i+1] & 0xFF) << 8) + (data[2*i] & 0xFF))) / ((double) MAX_16_BIT);
+            double v = ((short) (((data[2*i+1] & 0xFF) << 8) + (data[2*i] & 0xFF))) / ((double) Short.MAX_VALUE);
             World.double_array_setitem(x, i, v);
         }
     }
 
 
     /**
-     *  Helper to clean the memory (=> can be seen as also converting the object into synthesis mode!)
+     *  Helper to clean the memory
      *
      */
     public void clean() {
