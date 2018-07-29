@@ -33,8 +33,20 @@ public class JWorldWrapper
     private static final double MAX_16_BIT = Short.MAX_VALUE;     // 32,767
 
     static {
+        String libResourceName;
+        String osName = System.getProperty("os.name");
+        switch (osName) {
+            case ("Mac OS X"):
+                libResourceName = "libworld.dylib";
+                break;
+            case ("Linux"):
+                libResourceName = "libworld.so";
+                break;
+            default:
+                throw new RuntimeException("Cannot load library for OS: " + osName);
+        }
         try {
-            NativeUtils.loadLibraryFromJar("/libworld.so");
+            NativeUtils.loadLibraryFromJar("/" + libResourceName);
         } catch (IOException e) {
             e.printStackTrace(); // This is probably not the best way to handle exception :-)
         }
