@@ -149,8 +149,6 @@ public class JWorldTest {
 
     @Test
     public void testSynthesis() throws Exception {
-        // FIXME: Load some resources (not added to the repo for space, they should be produced by analysis first!!)
-
         //  - F0
 
         // Load reference F0
