@@ -1,34 +1,24 @@
 // Testing
-import org.testng.Assert;
-import org.testng.annotations.*;
-
-// Audio
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
-
-// IO
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.DoubleBuffer;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.Files;
-import java.nio.channels.FileChannel;
+import java.nio.DoubleBuffer;
 
-import java.util.Arrays;
-
-import java.net.URL;
+import javax.sound.sampled.AudioFileFormat;
+// Audio
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 
 import com.google.common.io.ByteStreams;
 
+import org.testng.Assert;
+import org.testng.annotations.*;
+
 // Example interface
-import jworld.*;
+import jworld.JWorldWrapper;
 
 public class JWorldTest {
 
@@ -77,9 +67,6 @@ public class JWorldTest {
         double[] f0_ref = new double[byteBuffer.asDoubleBuffer().remaining()];
         byteBuffer.asDoubleBuffer().get(f0_ref);
 
-        // for(int i=0;i<f0_ref.length;i++){
-        //     System.out.println("test f0: " + f0[i] + " =? " + f0_ref[i]);
-        // }
 
         // Assert !
         Assert.assertEquals(f0.length, f0_ref.length);
@@ -120,7 +107,6 @@ public class JWorldTest {
         Assert.assertEquals(sp_ref[0].length, sp[0].length);
         for (int t=0; t<f0.length; t++) {
             for (int i=0; i<sp[t].length; i++) {
-                // System.out.println("test sp: " + sp_ref[t][i] + " =? " + sp[t][i]);
                 Assert.assertEquals(sp_ref[t][i], sp[t][i], 0.001); // FIXME: check problem for rounding doubles!
             }
         }
