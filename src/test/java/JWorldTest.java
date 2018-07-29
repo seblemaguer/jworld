@@ -142,13 +142,12 @@ public class JWorldTest {
         Assert.assertEquals(ap_ref[0].length, ap[0].length);
         for (int t=0; t<f0.length; t++) {
             for (int i=0; i<ap[t].length; i++) {
-                // System.out.println("test ap: " + ap_ref[t][i] + " =? " + ap[t][i]);
                 Assert.assertEquals(ap_ref[t][i], ap[t][i], 0.001); // FIXME: check problem for rounding doubles!
             }
         }
     }
 
-    // @Test
+    @Test
     public void testSynthesis() throws Exception {
         // FIXME: Load some resources (not added to the repo for space, they should be produced by analysis first!!)
 
@@ -207,7 +206,25 @@ public class JWorldTest {
         URL url = JWorldTest.class.getResource("/vaiueo2d_rec.wav");
         AudioInputStream ref_ais = AudioSystem.getAudioInputStream(url);
 
+
         // Assert equality
-        Assert.assertEquals(ref_ais, ais);
+        AudioFormat format = ais.getFormat();
+        byte[] rend_bytes = new byte[(int) (ais.getFrameLength() * format.getFrameSize())];
+        ais.read(rend_bytes);
+        ByteBuffer buf = ByteBuffer.wrap(rend_bytes);
+        short[] rend_short = new short[buf.asShortBuffer().remaining()];
+        buf.asShortBuffer().get(rend_short);
+
+        format = ref_ais.getFormat();
+        byte[] ref_bytes = new byte[(int) (ref_ais.getFrameLength() * format.getFrameSize())];
+        ref_ais.read(ref_bytes);
+        buf = ByteBuffer.wrap(ref_bytes);
+        short[] ref_short = new short[buf.asShortBuffer().remaining()];
+        buf.asShortBuffer().get(ref_short);
+
+        Assert.assertEquals(ref_short.length, rend_short.length);
+        for (int s=0; s<ref_short.length; s++) {
+            Assert.assertEquals(ref_short[s], rend_short[s], 0.0001);
+        }
     }
 }
