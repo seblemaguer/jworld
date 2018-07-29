@@ -318,6 +318,16 @@ public class JWorldWrapper
             y[i] = World.double_array_getitem(y_s, i);
         }
 
+        // Free memory
+        for (int t=0; t<f0.length; t++) {
+            World.delete_double_array(World.double_p_array_getitem(sp_s, t));
+            World.delete_double_array(World.double_p_array_getitem(ap_s, t));
+        }
+        World.delete_double_p_array(ap_s);
+        World.delete_double_p_array(sp_s);
+        World.delete_double_array(f0_s);
+        World.delete_double_array(y_s);
+
         // Generate audio inputstream
         AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);   // use 16-bit audio, mono, signed PCM, little Endian
         byte[] data = new byte[2 * y.length];
