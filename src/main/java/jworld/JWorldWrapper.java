@@ -281,7 +281,7 @@ public class JWorldWrapper
      *  @return the filled audioinputstream containing the rendered results
      */
     public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap) {
-        int fft_len = sp[0].length - 1;
+        int fft_len = (sp[0].length - 1) * 2;
 
         // Generate F0 swig
         SWIGTYPE_p_double f0_s = World.new_double_array(f0.length);
