@@ -222,7 +222,7 @@ public class JWorldTest {
 
         Assert.assertEquals(ref_short.length, rend_short.length);
         for (int s=0; s<ref_short.length; s++) {
-            Assert.assertEquals(ref_short[s], rend_short[s], 0.0001);
+            Assert.assertEquals(ref_short[s], rend_short[s], 0);
         }
     }
 }
