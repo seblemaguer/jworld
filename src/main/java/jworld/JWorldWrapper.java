@@ -264,6 +264,8 @@ public class JWorldWrapper
      ** Synthesis entry part
      *****************************************************************************************************/
 
+
+
     /**
      *  Method to generate an audio based on given vocoder parameters.
      *  Should be called if the object is in synthesis mode!
@@ -274,6 +276,20 @@ public class JWorldWrapper
      *  @return the filled audioinputstream containing the rendered results
      */
     public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap) {
+        return synthesis(f0, sp, ap, false);
+    }
+
+    /**
+     *  Method to generate an audio based on given vocoder parameters.
+     *  Should be called if the object is in synthesis mode!
+     *
+     *  @param f0 the F0
+     *  @param sp the spectrum
+     *  @param ap the aperiodicity
+     *  @param as_short consider that the analysis as achieved on "short" coded data (true) or on "float" coded data (false)
+     *  @return the filled audioinputstream containing the rendered results
+     */
+    public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap, boolean as_short) {
         int fft_len = (sp[0].length - 1) * 2;
 
         // Generate F0 swig
@@ -334,7 +350,11 @@ public class JWorldWrapper
         AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);   // use 16-bit audio, mono, signed PCM, little Endian
         byte[] data = new byte[2 * y.length];
         for (int i = 0; i < y.length; i++) {
-            int temp = (int) Math.round(y[i]); // (short) (((float)y[i]) * Short.MAX_VALUE);
+            int temp;
+            if (! as_short)
+                temp = (short) (y[i] * Short.MAX_VALUE); // Scale if was in double (-1.0 ... 1.0)
+            else
+                temp = (int) Math.round(y[i]);
             data[2*i + 0] = (byte) temp;
             data[2*i + 1] = (byte) (temp >> 8);
         }
