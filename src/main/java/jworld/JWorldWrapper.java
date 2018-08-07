@@ -1,6 +1,5 @@
 package jworld;
 
-// IO
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -296,7 +295,10 @@ public class JWorldWrapper
         // Generate AP swig
         SWIGTYPE_p_p_double ap_s = World.new_double_p_array(ap.length);
         for (int t=0; t<ap.length; t++) {
+            // Create row
             SWIGTYPE_p_double row = World.new_double_array(ap[0].length);
+
+            // Set values
             for (int i=0; i<ap[t].length; i++) {
                 World.double_array_setitem(row, i, ap[t][i]);
             }
@@ -305,7 +307,7 @@ public class JWorldWrapper
         }
 
         // Synthesis
-        int y_length =  (int)((f0.length - 1) * frame_period / 1000.0 * sample_rate) + 1;
+        int y_length =  (int)(f0.length * frame_period / 1000.0 * sample_rate);
         SWIGTYPE_p_double y_s = World.new_double_array(y_length);
         World.Synthesis(f0_s, f0.length,
                         sp_s, ap_s,
@@ -332,7 +334,7 @@ public class JWorldWrapper
         AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);   // use 16-bit audio, mono, signed PCM, little Endian
         byte[] data = new byte[2 * y.length];
         for (int i = 0; i < y.length; i++) {
-            int temp = (short) (y[i] * Short.MAX_VALUE);
+            int temp = (int) Math.round(y[i]); // (short) (((float)y[i]) * Short.MAX_VALUE);
             data[2*i + 0] = (byte) temp;
             data[2*i + 1] = (byte) (temp >> 8);
         }
