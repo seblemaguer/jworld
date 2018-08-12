@@ -1,6 +1,5 @@
 package jworld;
 
-// IO
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
@@ -265,6 +264,8 @@ public class JWorldWrapper
      ** Synthesis entry part
      *****************************************************************************************************/
 
+
+
     /**
      *  Method to generate an audio based on given vocoder parameters.
      *  Should be called if the object is in synthesis mode!
@@ -275,6 +276,20 @@ public class JWorldWrapper
      *  @return the filled audioinputstream containing the rendered results
      */
     public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap) {
+        return synthesis(f0, sp, ap, false);
+    }
+
+    /**
+     *  Method to generate an audio based on given vocoder parameters.
+     *  Should be called if the object is in synthesis mode!
+     *
+     *  @param f0 the F0
+     *  @param sp the spectrum
+     *  @param ap the aperiodicity
+     *  @param as_short consider that the analysis as achieved on "short" coded data (true) or on "float" coded data (false)
+     *  @return the filled audioinputstream containing the rendered results
+     */
+    public AudioInputStream synthesis(double[] f0, double[][] sp, double[][] ap, boolean as_short) {
         int fft_len = (sp[0].length - 1) * 2;
 
         // Generate F0 swig
@@ -296,7 +311,10 @@ public class JWorldWrapper
         // Generate AP swig
         SWIGTYPE_p_p_double ap_s = World.new_double_p_array(ap.length);
         for (int t=0; t<ap.length; t++) {
+            // Create row
             SWIGTYPE_p_double row = World.new_double_array(ap[0].length);
+
+            // Set values
             for (int i=0; i<ap[t].length; i++) {
                 World.double_array_setitem(row, i, ap[t][i]);
             }
@@ -305,7 +323,7 @@ public class JWorldWrapper
         }
 
         // Synthesis
-        int y_length =  (int)((f0.length - 1) * frame_period / 1000.0 * sample_rate) + 1;
+        int y_length =  (int)(f0.length * frame_period / 1000.0 * sample_rate);
         SWIGTYPE_p_double y_s = World.new_double_array(y_length);
         World.Synthesis(f0_s, f0.length,
                         sp_s, ap_s,
@@ -332,7 +350,11 @@ public class JWorldWrapper
         AudioFormat format = new AudioFormat(sample_rate, 16, 1, true, false);   // use 16-bit audio, mono, signed PCM, little Endian
         byte[] data = new byte[2 * y.length];
         for (int i = 0; i < y.length; i++) {
-            int temp = (short) (y[i] * Short.MAX_VALUE);
+            int temp;
+            if (! as_short)
+                temp = (short) (y[i] * Short.MAX_VALUE); // Scale if was in double (-1.0 ... 1.0)
+            else
+                temp = (int) Math.round(y[i]);
             data[2*i + 0] = (byte) temp;
             data[2*i + 1] = (byte) (temp >> 8);
         }
